@@ -1,0 +1,291 @@
+Skip to content
+Chat history
+
+
+
+ChatGPT
+ChatGPT
+Explore GPTs
+Today
+Yesterday
+Previous 7 Days
+Previous 30 Days
+March
+February
+Upgrade plan
+More access to the best models
+You said:
+ASSIGNMENT 2
+Please find your assignment for today (Day2)
+
+UserManager utility
+
+Add NinjaTeam (Simulate Group) ex: team1
+Add a User (Simulate) under a team ex: Nitish added to team1
+
+
+Ensure below constraints are met:
+
+A user should have read,write, execute access to home directory
+All the users of same team should have read and excute access to home directory of fellow team members.
+others should have only execute permission to user's home directory
+In home directory of every user there should be 2 shared directories
+
+team: Same team members will have full access
+ninja: All ninja's will have full access
+
+i.e
+./UserManager.sh addTeam amigo
+./UserManager.sh addTeam unixkings
+./UserManager.sh addUser Rakesh amigo
+./UserManager.sh addUser Sandeep unixkings
+
+Resultant Structure
+/home
+  - Rakesh
+    - team
+    - ninja
+  - Sandeep
+    - team
+    - ninja
+
+
+
+Additional Features
+
+change user Shell
+change user password
+Delete user
+Delete Group
+list user or Team
+
+
+i.e 
+./UserManager.sh delTeam amigo
+
+./UserManager.sh delUser Rakesh
+
+./UserManager.sh changePasswd Rakesh
+
+./UserManager.sh changeShell Rakesh /bin/bash
+
+./UserManager.sh ls User
+
+./UserManager.sh ls Team
+ChatGPT said:
+Here's a UserManager.sh script that meets all your assignment requirements, including team management, user management, permission settings, and additional user operations.
+
+✅ Script: UserManager.sh
+#!/bin/bash
+
+BASE_DIR="/home"
+NINJA_GROUP="ninjateam"
+
+# Ensure ninja group exists
+getent group $NINJA_GROUP > /dev/null || groupadd $NINJA_GROUP
+
+add_team() {
+    local team=$1
+    getent group "$team" > /dev/null || groupadd "$team"
+    echo "Team '$team' created."
+}
+
+add_user() {
+    local username=$1
+    local team=$2
+
+    if ! getent group "$team" > /dev/null; then
+        echo "Team '$team' does not exist. Create it first."
+        exit 1
+    fi
+
+    useradd -m -g "$team" -G "$NINJA_GROUP" "$username"
+
+    user_home="$BASE_DIR/$username"
+
+    chmod 751 "$user_home"  # rwx--x--x
+
+    mkdir -p "$user_home/team"
+    mkdir -p "$user_home/ninja"
+
+    chown "$username:$team" "$user_home/team"
+    chown "$username:$NINJA_GROUP" "$user_home/ninja"
+
+    chmod 770 "$user_home/team"
+    chmod 770 "$user_home/ninja"
+
+    echo "User '$username' added to team '$team'."
+}
+
+delete_user() {
+    local username=$1
+    userdel -r "$username"
+    echo "User '$username' deleted."
+}
+
+delete_team() {
+    local team=$1
+    if getent group "$team" > /dev/null; then
+        for user in $(getent passwd | grep "/home/" | cut -d: -f1); do
+            if id -nG "$user" | grep -qw "$team"; then
+                delete_user "$user"
+            fi
+        done
+        groupdel "$team"
+        echo "Team '$team' deleted."
+    else
+        echo "Team '$team' doesn't exist."
+    fi
+}
+
+change_shell() {
+    local username=$1
+    local shell=$2
+    chsh -s "$shell" "$username"
+    echo "Shell for '$username' changed to '$shell'."
+}
+
+change_password() {
+    local username=$1
+    passwd "$username"
+}
+
+list_users() {
+    echo "Users:"
+    awk -F: -v home="$BASE_DIR" '$6 ~ home {print $1}' /etc/passwd
+}
+
+list_teams() {
+    echo "Teams:"
+    getent group | grep -v "$NINJA_GROUP" | awk -F: '$3 >= 1000 {print $1}'
+}
+
+case "$1" in
+    addTeam)
+        add_team "$2"
+        ;;
+    addUser)
+        add_user "$2" "$3"
+        ;;
+    delUser)
+        delete_user "$2"
+        ;;
+    delTeam)
+        delete_team "$2"
+        ;;
+    changeShell)
+        change_shell "$2" "$3"
+        ;;
+    changePasswd)
+        change_password "$2"
+        ;;
+    ls)
+        if [ "$2" == "User" ]; then
+            list_users
+        elif [ "$2" == "Team" ]; then
+            list_teams
+        else
+            echo "Unknown list option. Use 'User' or 'Team'."
+        fi
+        ;;
+    *)
+        echo "Usage:"
+        echo "./UserManager.sh addTeam <teamname>"
+        echo "./UserManager.sh addUser <username> <teamname>"
+        echo "./UserManager.sh delUser <username>"
+        echo "./UserManager.sh delTeam <teamname>"
+        echo "./UserManager.sh changeShell <username> <shell>"
+        echo "./UserManager.sh changePasswd <username>"
+        echo "./UserManager.sh ls User|Team"
+        ;;
+esac
+✅ Permission Logic Recap
+User home: 751 → Owner full, team & others execute-only.
+
+team/ dir: group = team, permissions = 770
+
+ninja/ dir: group = ninjateam, permissions = 770
+
+All users are added to the ninjateam group by default for shared access.
+
+Want me to create a version with logging or test cases too?
+
+
+You said:
+#!/sudo/bin/bash  that correct
+ChatGPT said:
+Almost! The shebang line #!/sudo/bin/bash is not correct.
+
+✅ Correct Shebang Line
+If you're trying to use bash, the correct shebang line should be one of the following:
+
+#!/bin/bash
+or, to make it more portable across systems:
+
+#!/usr/bin/env bash
+⚠️ Why #!/sudo/bin/bash is wrong:
+There is no such path as /sudo/bin/bash.
+
+sudo is a command, not a directory.
+
+If a script needs root privileges, you run it like:
+
+sudo ./UserManager.sh ...
+not by putting sudo in the shebang.
+
+So just start your script with:
+
+#!/bin/bash
+Let me know if you want to add a check at the top of your script to warn if not run with sudo—that can be useful too.
+
+You said:
+src refspec git_test does not match any
+error: failed to push some refs to 'https://github.com/Vinodbhatt76/new_test_repo.git'
+naresh@naresh-
+ChatGPT said:
+The error you're seeing:
+
+error: src refspec git_test does not match any
+error: failed to push some refs to 'https://github.com/Vinodbhatt76/new_test_repo.git'
+means Git can't find the branch git_test locally — likely because:
+
+You haven't created the branch, or
+
+You haven’t committed anything to it yet, or
+
+You mistyped the branch name
+
+✅ Here's how to fix it step-by-step:
+1. Check your current branch
+git branch
+Make sure you're on the correct branch (e.g., git_test).
+
+2. Create the branch (if it doesn't exist yet)
+git checkout -b git_test
+3. Add and commit changes
+git add .
+git commit -m "Initial commit on git_test"
+4. Push the branch to GitHub
+git push origin git_test
+If it’s the first push, and you created a new branch:
+
+git push -u origin git_test
+Let me know your current branch and whether you've committed anything—I'll guide you based on that.
+
+Do you like this personality
+
+
+
+
+
+
+
+
+Search
+
+Reason
+
+
+ChatGPT can make mistakes. Check important info.
+?
+
